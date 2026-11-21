@@ -1,0 +1,68 @@
+# Central configuration. Every CLI accepts --config to point at another file.
+seed: 42
+
+# "demo" = synthetic smoke-test data, "real" = H&M Kaggle data in data/raw/
+datasets:
+  demo:
+    raw_dir: data/demo
+    processed_dir: data/processed/demo
+    artifacts_dir: artifacts/demo
+    is_synthetic: true
+  real:
+    raw_dir: data/raw
+    processed_dir: data/processed/real
+    artifacts_dir: artifacts/real
+    is_synthetic: false
+
+synthetic:            # only used by scripts/make_demo_data.py
+  n_customers: 4000
+  n_articles: 1500
+  start_date: "2018-09-20"
+  end_date: "2020-09-22"
+  avg_transactions_per_customer: 30
+
+sampling:             # applied when reading the REAL data (laptop friendly)
+  customer_fraction: 0.05      # deterministic hash sample of customers
+  history_days: 365            # keep only the last N days of transactions
+  chunksize: 1000000
+  min_customer_transactions: 1
+
+split:                # chronological split, in days counted back from last date
+  test_days: 21
+  val_days: 21
+
+features:
+  recency_half_life_days: 60   # exponential decay of interaction weights
+  trending_window_days: 14     # "recent popularity" window
+
+evaluation:
+  ks: [5, 10]
+  max_k: 20
+  max_eval_users: 3000
+  exclude_seen: true           # candidate set excludes items the customer already bought
+  popular_item_quantile: 0.8   # top 20% of items by train popularity = "popular"
+  min_eval_candidates: 1
+
+models:
+  popularity:
+    half_life_days: 30
+  content:
+    max_features: 20000
+    ngram_range: [1, 2]
+  collaborative:
+    neighbors: 50
+    chunk: 1000
+  matrix_factorization:
+    factors: 32
+    regularization: 0.05
+    iterations: 15
+    alpha: 20.0
+    prefer_implicit_library: true   # falls back to built-in numpy ALS if unavailable
+  hybrid:
+    components: [popularity, content, collaborative, matrix_factorization, category_affinity, recency]
+    n_trials: 60                    # random search on the VALIDATION period only
+    tuning_metric: ndcg@10
+    max_tune_users: 1500
+
+segmentation:
+  k_range: [3, 4, 5, 6]
